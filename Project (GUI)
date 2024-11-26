@@ -1,0 +1,204 @@
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.sql.*;
+
+public class FoodOrderGUI {
+    private int total = 0;
+    private Connection connection;
+
+    private JComboBox<String> foodCategory;
+    private JComboBox<String> itemMenu;
+    private JTextField quantityField;
+    private JTextArea orderSummary;
+    private JTextField customerNameField;
+    private JTextField contactField;
+
+    public FoodOrderGUI() {
+        connectToDatabase();
+
+        JFrame frame = new JFrame("Cafe Menu");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(400, 500);
+        frame.setLayout(new FlowLayout());
+
+        String[] categories = {
+                "Select Category",
+                "Fries",
+                "Burgers (Veg)",
+                "Burgers (Non-Veg)",
+                "Pizzas (Veg)",
+                "Pizzas (Non-Veg)",
+                "Salads",
+                "Drips (Sauces)",
+                "Drinks",
+                "Desserts"
+        };
+
+        foodCategory = new JComboBox<>(categories);
+        itemMenu = new JComboBox<>();
+        quantityField = new JTextField(5);
+        orderSummary = new JTextArea(10, 30);
+        orderSummary.setEditable(false);
+        customerNameField = new JTextField(15);
+        contactField = new JTextField(15);
+
+        JButton addButton = new JButton("Add to Order");
+        JButton generateBillButton = new JButton("Generate Bill");
+        JButton saveOrderButton = new JButton("Save Order");
+
+        foodCategory.addActionListener(e -> updateItemMenu());
+        addButton.addActionListener(e -> addToOrder());
+        generateBillButton.addActionListener(e -> generateBill());
+        saveOrderButton.addActionListener(e -> saveOrder());
+
+        frame.add(new JLabel("Customer Name:"));
+        frame.add(customerNameField);
+        frame.add(new JLabel("Contact Info:"));
+        frame.add(contactField);
+        frame.add(foodCategory);
+        frame.add(itemMenu);
+        frame.add(new JLabel("Quantity:"));
+        frame.add(quantityField);
+        frame.add(addButton);
+        frame.add(generateBillButton);
+        frame.add(saveOrderButton);
+        frame.add(new JScrollPane(orderSummary));
+
+        frame.setVisible(true);
+    }
+
+    private void connectToDatabase() {
+        try {
+            String url = "jdbc:mysql://localhost:3306/cafe";
+            String user = "root";
+            String password = "";
+            connection = DriverManager.getConnection(url, user, password);
+            JOptionPane.showMessageDialog(null, "Connected to MySQL Database!");
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(null, "Database connection error: " + e.getMessage());
+        }
+    }
+
+    private void updateItemMenu() {
+        itemMenu.removeAllItems();
+        String selectedCategory = (String) foodCategory.getSelectedItem();
+
+        if ("Fries".equals(selectedCategory)) {
+            itemMenu.addItem("Regular Fries - 2");
+            itemMenu.addItem("Cheese Fries - 3");
+        } else if ("Burgers (Veg)".equals(selectedCategory)) {
+            itemMenu.addItem("Veggie Burger - 5");
+            itemMenu.addItem("Tofu Burger - 6");
+        } else if ("Burgers (Non-Veg)".equals(selectedCategory)) {
+            itemMenu.addItem("Chicken Burger - 7");
+            itemMenu.addItem("Beef Burger - 8");
+        } else if ("Pizzas (Veg)".equals(selectedCategory)) {
+            itemMenu.addItem("Margherita Pizza - 10");
+            itemMenu.addItem("Farmhouse Pizza - 12");
+        } else if ("Pizzas (Non-Veg)".equals(selectedCategory)) {
+            itemMenu.addItem("Pepperoni Pizza - 15");
+            itemMenu.addItem("BBQ Chicken Pizza - 14");
+        } else if ("Salads".equals(selectedCategory)) {
+            itemMenu.addItem("Caesar Salad - 5");
+            itemMenu.addItem("Greek Salad - 6");
+        } else if ("Drips (Sauces)".equals(selectedCategory)) {
+            itemMenu.addItem("Ketchup - 1");
+            itemMenu.addItem("Mayo - 1");
+        } else if ("Drinks".equals(selectedCategory)) {
+            itemMenu.addItem("Coke - 3");
+            itemMenu.addItem("Lemonade - 3");
+        } else if ("Desserts".equals(selectedCategory)) {
+            itemMenu.addItem("Chocolate Cake - 5");
+            itemMenu.addItem("Ice Cream - 4");
+        }
+    }
+
+    private void addToOrder() {
+        String selectedItem = (String) itemMenu.getSelectedItem();
+        int quantity;
+
+        try {
+            quantity = Integer.parseInt(quantityField.getText());
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(null, "Please enter a valid quantity.");
+            return;
+        }
+
+        if (selectedItem != null && quantity > 0) {
+            String[] parts = selectedItem.split(" - ");
+            String itemName = parts[0];
+            int itemPrice = Integer.parseInt(parts[1]);
+            total += itemPrice * quantity;
+            orderSummary.append(quantity + " x " + itemName + " = " + (itemPrice * quantity) + "\n");
+            quantityField.setText("");
+        } else {
+            JOptionPane.showMessageDialog(null, "Please select an item and enter a valid quantity.");
+        }
+    }
+
+    private void generateBill() {
+        if (total > 0) {
+            JOptionPane.showMessageDialog(null, "Total Bill: " + total);
+            orderSummary.setText(""); // Clear order summary
+            total = 0; // Reset total for the next order
+        } else {
+            JOptionPane.showMessageDialog(null, "No items ordered yet.");
+        }
+    }
+
+    private void saveOrder() {
+        String customerName = customerNameField.getText();
+        String contactInfo = contactField.getText();
+
+        if (customerName.isEmpty() || contactInfo.isEmpty() || total <= 0) {
+            JOptionPane.showMessageDialog(null, "Please provide customer details and add items to the order.");
+            return;
+        }
+
+        try {
+            String sqlInsertCustomer = "INSERT INTO customers (name, contact_info) VALUES (?, ?)";
+            PreparedStatement pstmtCustomer = connection.prepareStatement(sqlInsertCustomer, PreparedStatement.RETURN_GENERATED_KEYS);
+            pstmtCustomer.setString(1, customerName);
+            pstmtCustomer.setString(2, contactInfo);
+            pstmtCustomer.executeUpdate();
+
+            ResultSet generatedKeys = pstmtCustomer.getGeneratedKeys();
+            int customerId = -1;
+            if (generatedKeys.next()) {
+                customerId = generatedKeys.getInt(1);
+            }
+
+            String[] lines = orderSummary.getText().split("\n");
+            for (String line : lines) {
+                String[] parts = line.split(" = ");
+                String[] itemParts = parts[0].split(" x ");
+                String itemName = itemParts[1];
+                int quantity = Integer.parseInt(itemParts[0]);
+                double itemTotal = Double.parseDouble(parts[1]);
+
+                String sqlInsertOrder = "INSERT INTO orders (customer_id, item_name, quantity, total_price) VALUES (?, ?, ?, ?)";
+                PreparedStatement pstmtOrder = connection.prepareStatement(sqlInsertOrder);
+                pstmtOrder.setInt(1, customerId);
+                pstmtOrder.setString(2, itemName);
+                pstmtOrder.setInt(3, quantity);
+                pstmtOrder.setDouble(4, itemTotal);
+                pstmtOrder.executeUpdate();
+            }
+
+            JOptionPane.showMessageDialog(null, "Order saved successfully!");
+            orderSummary.setText(""); // Clear order summary
+            total = 0; // Reset total for the next order
+            customerNameField.setText("");
+            contactField.setText("");
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(null, "Error saving order: " + e.getMessage());
+        }
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(FoodOrderGUI::new);
+    }
+}
