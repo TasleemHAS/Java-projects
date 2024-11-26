@@ -1,7 +1,7 @@
 import java.util.Scanner;
+import java.util.Vector;
 
-public class Foodorder 
-{
+public class Foodorder {
     int frenchfries = 100;
     int burger = 120;
     int pastry = 100;
@@ -11,17 +11,15 @@ public class Foodorder
     int icedtea = 80;
     int total;
     Scanner sc = new Scanner(System.in);
-    Customer[] customers = new Customer[100]; // array of 100 customers
+    Vector<Customer> customers = new Vector<>(); // Vector to store customers
 
-    public static void main(String[] args) 
-{
+    public static void main(String[] args) {
         Foodorder fo = new Foodorder();
         fo.displayMenu();
         fo.order();
     }
 
-    public void displayMenu() 
-{
+    public void displayMenu() {
         System.out.println("********** WELCOME TO OUR CAFE ************");
         System.out.println("*******************************************");
         System.out.println("      1. Frenchfries          100/-");
@@ -33,123 +31,98 @@ public class Foodorder
         System.out.println("      7. Icedtea              80/-");
         System.out.println("********************************************");
         System.out.println("     What do you want to order today??      ");
-        }
-
-    public void generateBill() 
-   {
-        System.out.println();
-        System.out.println("***********Thank You For Ordering***************");
-        System.out.println("***********Your Bill is : " + total + "*************");
     }
 
-    public void order() 
-    {
+    public void generateBill() {
+        System.out.println();
+        System.out.println("*********** Thank You For Ordering ***************");
+        System.out.println("*********** Your Bill is : " + total + " *************");
+    }
+
+    public void order() {
         String again;
-        int customerIndex = -1; // index of the current customer
-        while (true) 
-    {
-            if (customerIndex < 0) {
-                // display menu for the first time
-                displayMenu();
-            }
+        while (true) {
+            displayMenu();
             System.out.print("Enter your choice : ");
             int ch = sc.nextInt();
-            switch (ch)
-   {
-                case 1: // frenchfries
+            switch (ch) {
+                case 1:
                     System.out.println("You have selected frenchfries ");
-                    System.out.println();
                     System.out.println("Enter the desired quantity");
                     int quantity = sc.nextInt();
-                    total = total + quantity * frenchfries;
+                    total += quantity * frenchfries;
                     break;
 
-                case 2: // burger
+                case 2:
                     System.out.println("You have selected burger");
-                    System.out.println();
                     System.out.println("Enter the desired quantity");
                     quantity = sc.nextInt();
-                    total = total + quantity * burger;
+                    total += quantity * burger;
                     break;
 
-                case 3: // pastry
+                case 3:
                     System.out.println("You have selected pastry ");
-                    System.out.println();
                     System.out.println("Enter the desired quantity");
                     quantity = sc.nextInt();
-                    total = total + quantity * pastry;
+                    total += quantity * pastry;
                     break;
 
-                case 4: // pizza
+                case 4:
                     System.out.println("You have selected pizza ");
-                    System.out.println();
                     System.out.println("Enter the desired quantity");
                     quantity = sc.nextInt();
-                    total = total + quantity * pizza;
+                    total += quantity * pizza;
                     break;
 
-                case 5: // coldcoffee
+                case 5:
                     System.out.println("You have selected coldcoffee ");
-                    System.out.println();
                     System.out.println("Enter the desired quantity");
                     quantity = sc.nextInt();
-                    total = total + quantity * coldcoffee;
+                    total += quantity * coldcoffee;
                     break;
 
-                case 6: // colddrink
+                case 6:
                     System.out.println("You have selected colddrink ");
-                    System.out.println();
                     System.out.println("Enter the desired quantity");
                     quantity = sc.nextInt();
-                    total = total + quantity * colddrink;
+                    total += quantity * colddrink;
                     break;
 
-                case 7: // icedtea
+                case 7:
                     System.out.println("You have selected icedtea ");
-                    System.out.println();
                     System.out.println("Enter the desired quantity");
                     quantity = sc.nextInt();
-                    total = total + quantity * icedtea;
+                    total += quantity * icedtea;
                     break;
 
-                case 8: // exit
+                case 8:
                     generateBill();
-                    if (customerIndex >= 0) {
-                        customers[customerIndex].totalBill = total;
-                        customers[customerIndex].totalQuantity += total; // update customer's total order
-                        customerIndex++;
-                        if (customerIndex >= customers.length) {
-                            break; // all customers have been served
-                        }
-                        // reset order for next customer
-                        total = 0;
-                        displayMenu();
-                    } else {
-                        break; // exit program
+                    customers.add(new Customer(total));
+                    total = 0;
+                    System.out.print("Would you like to place another order? (Y/N): ");
+                    again = sc.next();
+                    if (again.equalsIgnoreCase("N")) {
+                        System.out.println("Exiting...");
+                        return;
                     }
+                    break;
+
                 default:
                     System.out.println("Invalid choice");
                     break;
             }
             System.out.println();
-            if (ch != 8) {
-                System.out.print("Do you wish to order anything else? (Y/N): ");
-                again = sc.next();
-                if (again.equalsIgnoreCase("N")) 
-         {
+            System.out.print("Do you wish to order anything else? (Y/N): ");
+            again = sc.next();
+            if (again.equalsIgnoreCase("N")) {
                 generateBill();
-                if (customerIndex >= 0) {
-                        customers[customerIndex].totalBill = total;
-                        customers[customerIndex].totalQuantity += total; // update customer's total order
-                        customerIndex++;
-                        if (customerIndex >= customers.length) {
-                            break; // all customers have been served
-                        }
-                        // reset order for next customer
-                        total = 0;
-                        displayMenu();
-                } else {
-                        break; // exit program
+                customers.add(new Customer(total));
+                total = 0;
+                System.out.print("Would you like to place another order? (Y/N): ");
+                again = sc.next();
+                if (again.equalsIgnoreCase("N")) {
+                    System.out.println("Exiting...");
+                    return;
                 }
             }
         }
@@ -158,6 +131,8 @@ public class Foodorder
 
 class Customer {
     int totalBill;
-    int totalQuantity;
-}
 
+    public Customer(int totalBill) {
+        this.totalBill = totalBill;
+    }
+}
