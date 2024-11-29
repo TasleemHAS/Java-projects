@@ -2,145 +2,116 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.sql.*;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.regex.Pattern;
 
-public class CafeOrderingSystem {
-    private JFrame frame;
-    private JPanel mainPanel;
-    private CardLayout cardLayout;
-    private JTextArea orderSummary;
-    private int total = 0;
-    private String customerName, customerContact, customerEmail, paymentMode;
-    private Connection connection;
+public class PizzaShopWelcomePage {
+    private static JPanel mainPanel;
+    private static JFrame frame;
+    private static double total = 0;
+    private static JComboBox<String> foodCategory, itemMenu;
+    private static JTextField quantityField;
+    private static JTextArea orderSummary;
+    private static JLabel totalLabel;
+    private static String orderDetails = ""; // To store order details for the customer
 
-    private JComboBox<String> foodCategory;
-    private JComboBox<String> itemMenu;
-    private JTextField quantityField;
-    private JLabel totalLabel;
-    private JComboBox<String> paymentModeComboBox;
-    private JTextField discountField; // New field for discount
+    // Database connection details
+    private static final String DB_URL = "jdbc:mysql://localhost:3307/pizza_shop";
+    private static final String DB_USERNAME = "root";
+    private static final String DB_PASSWORD = "";
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(CafeOrderingSystem::new);
-    }
-
-    public CafeOrderingSystem() {
-        frame = new JFrame("Cafe Ordering System");
+        frame = new JFrame("Slice Heaven");
+        frame.setSize(800, 600);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(600, 750);
+        frame.setLayout(new CardLayout()); // Using CardLayout for multiple pages
 
-        cardLayout = new CardLayout();
-        mainPanel = new JPanel(cardLayout);
-        mainPanel.setBackground(new Color(255, 224, 204)); // Pastel background color
-
+        mainPanel = new JPanel(new CardLayout());
         mainPanel.add(createWelcomePage(), "WelcomePage");
-        mainPanel.add(createLoginPage(), "LoginPage");
-        mainPanel.add(createMenuPage(), "MenuPage");
-        mainPanel.add(createBillingPage(), "BillingPage");
-
+        mainPanel.add(createOrderPage(), "OrderPage");
         frame.add(mainPanel);
         frame.setVisible(true);
-
-        cardLayout.show(mainPanel, "WelcomePage");
-
-        connectToDatabase();
     }
 
-    private JPanel createWelcomePage() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(new Color(255, 204, 204)); // Pastel color
-        JLabel welcomeLabel = new JLabel("Welcome to Our Cafe!", SwingConstants.CENTER);
-        welcomeLabel.setFont(new Font("Arial", Font.BOLD, 30));
-        welcomeLabel.setForeground(new Color(102, 51, 0));
+    // Create Welcome Page
+    private static JPanel createWelcomePage() {
+        JPanel panel = new JPanel();
+        panel.setLayout(null);
+        panel.setBackground(Color.WHITE);
 
-        JButton nextButton = new JButton("Continue");
-        nextButton.setFont(new Font("Arial", Font.PLAIN, 18));
-        nextButton.setBackground(new Color(255, 153, 153));
-        nextButton.setForeground(Color.WHITE);
-        nextButton.setFocusPainted(false);
-        nextButton.addActionListener(e -> cardLayout.show(mainPanel, "LoginPage"));
+        JLabel titleLabel = new JLabel("Slice Heaven");
+        titleLabel.setFont(new Font("Brush Script MT", Font.BOLD, 50));
+        titleLabel.setForeground(new Color(255, 153, 51));
+        titleLabel.setBounds(30, 20, 300, 50);
+        panel.add(titleLabel);
 
-        panel.add(welcomeLabel, BorderLayout.CENTER);
-        panel.add(nextButton, BorderLayout.SOUTH);
+        JLabel sloganLabel = new JLabel("<html>Escape into a world of delicious pizza<br><span style='font-size:20px; color:black;'>where every slice is a treat.</span></html>");
+        sloganLabel.setFont(new Font("Arial", Font.BOLD, 30));
+        sloganLabel.setForeground(Color.BLACK);
+        sloganLabel.setBounds(30, 100, 600, 100);
+        panel.add(sloganLabel);
+
+        JButton orderButton = new JButton("Order Now");
+        orderButton.setFont(new Font("Arial", Font.BOLD, 18));
+        orderButton.setBackground(new Color(255, 153, 51));
+        orderButton.setBounds(650, 450, 120, 40);
+        orderButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        orderButton.addActionListener(e -> showOrderPage());
+        panel.add(orderButton);
 
         return panel;
     }
 
-    private JPanel createLoginPage() {
-        JPanel panel = new JPanel(new GridLayout(5, 2, 10, 10));
-        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-        panel.setBackground(new Color(255, 229, 204)); // Pastel color
-
-        JLabel nameLabel = new JLabel("Name:");
-        nameLabel.setFont(new Font("Arial", Font.PLAIN, 18));
-        nameLabel.setForeground(new Color(102, 51, 0));
-        JTextField nameField = new JTextField();
-
-        JLabel contactLabel = new JLabel("Contact Number:");
-        contactLabel.setFont(new Font("Arial", Font.PLAIN, 18));
-        contactLabel.setForeground(new Color(102, 51, 0));
-        JTextField contactField = new JTextField();
-
-        JLabel emailLabel = new JLabel("Email:");
-        emailLabel.setFont(new Font("Arial", Font.PLAIN, 18));
-        emailLabel.setForeground(new Color(102, 51, 0));
-        JTextField emailField = new JTextField();
-
-        JButton submitButton = new JButton("Submit");
-        submitButton.setFont(new Font("Arial", Font.PLAIN, 18));
-        submitButton.setBackground(new Color(255, 153, 153));
-        submitButton.setForeground(Color.WHITE);
-        submitButton.setFocusPainted(false);
-        submitButton.addActionListener(e -> {
-            customerName = nameField.getText().trim();
-            customerContact = contactField.getText().trim();
-            customerEmail = emailField.getText().trim();
-
-            if (customerName.isEmpty() || customerContact.isEmpty() || customerEmail.isEmpty()) {
-                JOptionPane.showMessageDialog(frame, "Please fill in all details!", "Error", JOptionPane.WARNING_MESSAGE);
-            } else if (!isValidEmail(customerEmail)) {
-                JOptionPane.showMessageDialog(frame, "Invalid email format!", "Error", JOptionPane.WARNING_MESSAGE);
-            } else if (!isValidPhoneNumber(customerContact)) {
-                JOptionPane.showMessageDialog(frame, "Invalid contact number!", "Error", JOptionPane.WARNING_MESSAGE);
-            } else {
-                cardLayout.show(mainPanel, "MenuPage");
-            }
-        });
-
-        panel.add(nameLabel);
-        panel.add(nameField);
-        panel.add(contactLabel);
-        panel.add(contactField);
-        panel.add(emailLabel);
-        panel.add(emailField);
-        panel.add(new JLabel());
-        panel.add(submitButton);
-
-        return panel;
+    // Show Order Page
+    private static void showOrderPage() {
+        CardLayout cardLayout = (CardLayout) mainPanel.getLayout();
+        cardLayout.show(mainPanel, "OrderPage");
     }
 
-    private JPanel createMenuPage() {
+    // Create Order Page
+    private static JPanel createOrderPage() {
+        JPanel orderPanel = new JPanel();
+        orderPanel.setLayout(null);
+        orderPanel.setBackground(Color.WHITE);
+
+        JLabel orderTitle = new JLabel("Your Order is Just 15 Minutes Away!");
+        orderTitle.setFont(new Font("Brush Script MT", Font.BOLD, 40));
+        orderTitle.setForeground(new Color(255, 153, 51));
+        orderTitle.setBounds(30, 30, 500, 50);
+        orderPanel.add(orderTitle);
+
+        JButton menuButtonOnOrderPage = new JButton("Menu");
+        menuButtonOnOrderPage.setFont(new Font("Arial", Font.BOLD, 18));
+        menuButtonOnOrderPage.setBackground(new Color(255, 204, 0));
+        menuButtonOnOrderPage.setBounds(30, 250, 120, 40);
+        menuButtonOnOrderPage.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        menuButtonOnOrderPage.addActionListener(e -> showMenuPage());
+        orderPanel.add(menuButtonOnOrderPage);
+
+        return orderPanel;
+    }
+
+    // Show Menu Page
+    private static void showMenuPage() {
+        CardLayout cardLayout = (CardLayout) mainPanel.getLayout();
+        mainPanel.add(createMenuPage(), "MenuPage");
+        cardLayout.show(mainPanel, "MenuPage");
+    }
+
+    // Create Menu Page
+    private static JPanel createMenuPage() {
         JPanel menuPanel = new JPanel(new BorderLayout());
-        menuPanel.setBackground(new Color(224, 224, 255)); // Pastel color
+        menuPanel.setBackground(new Color(240, 248, 255));
 
         JLabel menuLabel = new JLabel("Menu", SwingConstants.CENTER);
         menuLabel.setFont(new Font("Arial", Font.BOLD, 22));
         menuLabel.setForeground(new Color(102, 51, 0));
+        menuPanel.add(menuLabel, BorderLayout.NORTH);
 
         JPanel inputPanel = new JPanel(new GridBagLayout());
-        inputPanel.setBorder(BorderFactory.createTitledBorder("Order Details"));
-        inputPanel.setBackground(new Color(255, 239, 204)); // Pastel color
-
+        inputPanel.setBackground(new Color(255, 250, 240));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(10, 10, 10, 10);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        foodCategory = new JComboBox<>(new String[]{
-                "Select Category", "Fries", "Burgers (Veg)", "Burgers (Non-Veg)", "Pizzas (Veg)", 
-                "Pizzas (Non-Veg)", "Pasta", "Salads", "Desserts", "Beverages", "Dips"
-        });
+        foodCategory = new JComboBox<>(new String[]{"Select Category", "Fries", "Pizzas (Veg)", "Pizzas (Non-Veg)"});
         itemMenu = new JComboBox<>();
         quantityField = new JTextField(5);
         orderSummary = new JTextArea(10, 30);
@@ -149,30 +120,11 @@ public class CafeOrderingSystem {
         totalLabel.setFont(new Font("Arial", Font.BOLD, 20));
         totalLabel.setForeground(new Color(0, 128, 0));
 
-        paymentModeComboBox = new JComboBox<>(new String[]{"Select Payment Mode", "Cash", "Card", "UPI"});
-        discountField = new JTextField(5); // New field for discount
-
         JButton addButton = new JButton("Add to Order");
-        JButton removeButton = new JButton("Remove Last Item");
         JButton generateBillButton = new JButton("Generate Bill");
-
-        addButton.setFont(new Font("Arial", Font.PLAIN, 18));
-        removeButton.setFont(new Font("Arial", Font.PLAIN, 18));
-        generateBillButton.setFont(new Font("Arial", Font.PLAIN, 18));
-        addButton.setBackground(new Color(255, 153, 153));
-        removeButton.setBackground(new Color(255, 102, 102));
-        generateBillButton.setBackground(new Color(102, 255, 102));
-        addButton.setForeground(Color.WHITE);
-        removeButton.setForeground(Color.WHITE);
-        generateBillButton.setForeground(Color.WHITE);
-
-        addButton.setFocusPainted(false);
-        removeButton.setFocusPainted(false);
-        generateBillButton.setFocusPainted(false);
 
         foodCategory.addActionListener(e -> updateItemMenu());
         addButton.addActionListener(e -> addToOrder());
-        removeButton.addActionListener(e -> removeLastItem());
         generateBillButton.addActionListener(e -> generateBill());
 
         gbc.gridx = 0;
@@ -197,21 +149,7 @@ public class CafeOrderingSystem {
         gbc.gridy = 3;
         inputPanel.add(addButton, gbc);
         gbc.gridx = 1;
-        inputPanel.add(removeButton, gbc);
-        gbc.gridx = 2;
         inputPanel.add(generateBillButton, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = 4;
-        inputPanel.add(new JLabel("Payment Mode:"), gbc);
-        gbc.gridx = 1;
-        inputPanel.add(paymentModeComboBox, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = 5;
-        inputPanel.add(new JLabel("Discount (%):"), gbc);
-        gbc.gridx = 1;
-        inputPanel.add(discountField, gbc); // Adding discount field
 
         menuPanel.add(inputPanel, BorderLayout.CENTER);
 
@@ -224,246 +162,110 @@ public class CafeOrderingSystem {
         return menuPanel;
     }
 
-    private JPanel createBillingPage() {
-        JPanel billingPanel = new JPanel(new BorderLayout());
-        billingPanel.setBackground(new Color(255, 248, 220)); // Pastel color
-        JLabel billingLabel = new JLabel("Billing Details", SwingConstants.CENTER);
-        billingLabel.setFont(new Font("Arial", Font.BOLD, 22));
-        billingLabel.setForeground(new Color(102, 51, 0));
-
-        JTextArea billDetailsArea = new JTextArea(15, 40);
-        billDetailsArea.setEditable(false);
-        JScrollPane billScroll = new JScrollPane(billDetailsArea);
-
-        JButton backButton = new JButton("Back to Menu");
-        JButton confirmButton = new JButton("Confirm Order");
-
-        backButton.setFont(new Font("Arial", Font.PLAIN, 18));
-        confirmButton.setFont(new Font("Arial", Font.PLAIN, 18));
-        backButton.setBackground(new Color(255, 102, 102));
-        confirmButton.setBackground(new Color(102, 255, 102));
-        backButton.setForeground(Color.WHITE);
-        confirmButton.setForeground(Color.WHITE);
-
-        backButton.setFocusPainted(false);
-        confirmButton.setFocusPainted(false);
-
-        backButton.addActionListener(e -> cardLayout.show(mainPanel, "MenuPage"));
-        confirmButton.addActionListener(e -> confirmOrder(billDetailsArea));
-
-        JPanel buttonsPanel = new JPanel();
-        buttonsPanel.setLayout(new GridLayout(1, 2, 20, 10));
-        buttonsPanel.add(backButton);
-        buttonsPanel.add(confirmButton);
-
-        billingPanel.add(billingLabel, BorderLayout.NORTH);
-        billingPanel.add(billScroll, BorderLayout.CENTER);
-        billingPanel.add(buttonsPanel, BorderLayout.SOUTH);
-
-        return billingPanel;
-    }
-
-    private void addToOrder() {
+    // Update Item Menu based on Category
+    private static void updateItemMenu() {
         String selectedCategory = (String) foodCategory.getSelectedItem();
-        String selectedItem = (String) itemMenu.getSelectedItem();
-        String quantityText = quantityField.getText().trim();
-
-        if (selectedCategory.equals("Select Category") || selectedItem.equals("Select Item") || quantityText.isEmpty()) {
-            JOptionPane.showMessageDialog(frame, "Please fill all fields", "Error", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        int quantity = Integer.parseInt(quantityText);
-        int price = getItemPrice(selectedItem);
-
-        total += price * quantity;
-        orderSummary.append(selectedItem + " (" + quantity + " x ₹" + price + ")\n");
-        totalLabel.setText("Total: ₹" + total);
-    }
-
-    private void removeLastItem() {
-        // Code to remove the last item from the order (this can be a bit more complex depending on how you store items in the order)
-        JOptionPane.showMessageDialog(frame, "Item removed successfully!", "Item Removed", JOptionPane.INFORMATION_MESSAGE);
-    }
-
-    private void generateBill() {
-        String selectedPaymentMode = (String) paymentModeComboBox.getSelectedItem();
-        if (selectedPaymentMode.equals("Select Payment Mode")) {
-            JOptionPane.showMessageDialog(frame, "Please select a payment mode", "Error", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        paymentMode = selectedPaymentMode;
-        double discount = 0;
-        try {
-            discount = Double.parseDouble(discountField.getText().trim());
-        } catch (NumberFormatException e) {
-            // Handle if discount is not a valid number
-            JOptionPane.showMessageDialog(frame, "Please enter a valid discount.", "Error", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        double tax = total * 0.18;  // Assuming 18% GST
-        double grandTotal = total + tax;
-        if (discount > 0) {
-            grandTotal -= grandTotal * (discount / 100); // Apply discount
-        }
-
-        orderSummary.append("\n-------------------------------------\n");
-        orderSummary.append("Tax (18% GST): ₹" + tax + "\n");
-        if (discount > 0) {
-            orderSummary.append("Discount Applied: " + discount + "%\n");
-        }
-        orderSummary.append("Grand Total: ₹" + grandTotal + "\n");
-        orderSummary.append("\nPayment Mode: " + paymentMode + "\n");
-        orderSummary.append("Date & Time: " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) + "\n");
-
-        JOptionPane.showMessageDialog(frame, "Bill generated successfully! Check your order summary.", "Bill Generated", JOptionPane.INFORMATION_MESSAGE);
-        cardLayout.show(mainPanel, "BillingPage");
-    }
-
-    private void confirmOrder(JTextArea billDetailsArea) {
-        // Generate Bill Details
-        StringBuilder bill = new StringBuilder();
-        bill.append("Cafe Order Bill\n");
-        bill.append("Customer Name: " + customerName + "\n");
-        bill.append("Contact: " + customerContact + "\n");
-        bill.append("Email: " + customerEmail + "\n");
-        bill.append("Date & Time: " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) + "\n");
-        bill.append("\nItems Ordered:\n");
-        bill.append(orderSummary.getText());
-
-        double tax = total * 0.18;
-        double grandTotal = total + tax;
-        double discount = 0;
-        try {
-            discount = Double.parseDouble(discountField.getText().trim());
-        } catch (NumberFormatException e) {
-            // Handle if discount is not a valid number
-        }
-        if (discount > 0) {
-            grandTotal -= grandTotal * (discount / 100); // Apply discount in total
-            bill.append("Discount Applied: " + discount + "%\n");
-        }
-        bill.append("\n--------------------------------------\n");
-        bill.append("Tax (18% GST): ₹" + tax + "\n");
-        bill.append("Total Amount: ₹" + grandTotal + "\n");
-        bill.append("\nPayment Method: " + paymentMode + "\n");
-        bill.append("\nThank you for visiting our Cafe!\n");
-        bill.append("Cafe Name: Awesome Cafe\n");
-        bill.append("Address: 123 Coffee Lane, Cafe City\n");
-        bill.append("Phone: (123) 456-7890\n");
-        bill.append("We hope to see you again!");
-
-        billDetailsArea.setText(bill.toString());
-
-        // Reset fields after order is confirmed
-        total = 0;
-        orderSummary.setText("");
-        totalLabel.setText("Total: ₹0");
-        paymentModeComboBox.setSelectedIndex(0);
-        foodCategory.setSelectedIndex(0);
-        itemMenu.setSelectedIndex(0);
-        quantityField.setText("");
-        discountField.setText(""); // Reset discount field
-    }
-
-    private void updateItemMenu() {
-        String category = (String) foodCategory.getSelectedItem();
         itemMenu.removeAllItems();
+        itemMenu.addItem("Select Item");
 
-        if (category.equals("Fries")) {
-            itemMenu.addItem("Masala Fries - ₹50");
-            itemMenu.addItem("Cheese Fries - ₹60");
-            itemMenu.addItem("Chili Cheese Fries - ₹70");
-            itemMenu.addItem("Sweet Potato Fries - ₹80");
-            itemMenu.addItem("Loaded Fries - ₹90");
-        } else if (category.equals("Burgers (Veg)")) {
-            itemMenu.addItem("Veg Burger - ₹70");
-            itemMenu.addItem("Paneer Burger - ₹80");
-            itemMenu.addItem("Mushroom Burger - ₹90");
-            itemMenu.addItem("Spicy Bean Burger - ₹85");
-            itemMenu.addItem("Avocado Burger - ₹100");
-        } else if (category.equals("Burgers (Non-Veg)")) {
-            itemMenu.addItem("Chicken Burger - ₹90");
-            itemMenu.addItem("Beef Burger - ₹120");
-            itemMenu.addItem("BBQ Chicken Burger - ₹110");
-            itemMenu.addItem("Spicy Chicken Burger - ₹100");
-            itemMenu.addItem("Teriyaki Chicken Burger - ₹130");
-        } else if (category.equals("Pizzas (Veg)")) {
-            itemMenu.addItem("Veg Margherita - ₹150");
-            itemMenu.addItem("Veg Supreme - ₹180");
-            itemMenu.addItem("Veg Exotica - ₹200");
-            itemMenu.addItem("Spinach & Ricotta Pizza - ₹190");
-            itemMenu.addItem("Pesto Veg Pizza - ₹180");
-        } else if (category.equals("Pizzas (Non-Veg)")) {
-            itemMenu.addItem("Chicken Supreme - ₹200");
-            itemMenu.addItem("BBQ Chicken Pizza - ₹250");
-            itemMenu.addItem("Pepperoni Pizza - ₹300");
-            itemMenu.addItem("Tandoori Chicken Pizza - ₹280");
-            itemMenu.addItem("Seafood Pizza - ₹350");
-        } else if (category.equals("Pasta")) {
-            itemMenu.addItem("Veg Pasta - ₹90");
-            itemMenu.addItem("Cheese Pasta - ₹100");
-            itemMenu.addItem("Penne Arrabbiata - ₹110");
-            itemMenu.addItem("Alfredo Pasta - ₹120");
-            itemMenu.addItem("Pesto Pasta - ₹110");
-        } else if (category.equals("Salads")) {
-            itemMenu.addItem("Caesar Salad - ₹80");
-            itemMenu.addItem("Greek Salad - ₹90");
-            itemMenu.addItem("Quinoa Salad - ₹100");
-            itemMenu.addItem("Caprese Salad - ₹90");
-            itemMenu.addItem("Taco Salad - ₹100");
-        } else if (category.equals("Desserts")) {
-            itemMenu.addItem("Chocolate Cake - ₹60");
-            itemMenu.addItem("Panna Cotta - ₹50");
-            itemMenu.addItem("Tiramisu - ₹70");
-            itemMenu.addItem("Ice Cream Sundae - ₹40");
-            itemMenu.addItem("Fruit Tart - ₹65");
-        } else if (category.equals("Beverages")) {
-            itemMenu.addItem("Coffee - ₹40");
-            itemMenu.addItem("Tea - ₹30");
-            itemMenu.addItem("Lemonade - ₹50");
-            itemMenu.addItem("Soft Drink - ₹40");
-            itemMenu.addItem("Fruit Juice - ₹60");
-        } else if (category.equals("Dips")) {
-            itemMenu.addItem("Ketchup - ₹20");
-            itemMenu.addItem("Mayonnaise - ₹30");
-            itemMenu.addItem("BBQ Sauce - ₹25");
-            itemMenu.addItem("Ranch Dressing - ₹30");
-            itemMenu.addItem("Salsa - ₹35");
+        if ("Fries".equals(selectedCategory)) {
+            itemMenu.addItem("Classic Fries");
+            itemMenu.addItem("Cheese Fries");
+        } else if ("Pizzas (Veg)".equals(selectedCategory)) {
+            itemMenu.addItem("Margherita Pizza");
+            itemMenu.addItem("Veggie Supreme Pizza");
+        } else if ("Pizzas (Non-Veg)".equals(selectedCategory)) {
+            itemMenu.addItem("Pepperoni Pizza");
+            itemMenu.addItem("Chicken Tikka Pizza");
         }
     }
 
-    private int getItemPrice(String item) {
-        if (item.contains("Masala Fries")) {
-            return 50;
-        } else if (item.contains("Cheese Fries")) {
-            return 60;
-        } else if (item.contains("Chili Cheese Fries")) {
-            return 70;
-        } else if (item.contains("Sweet Potato Fries")) {
-            return 80;
-        } else if (item.contains("Loaded Fries")) {
-            return 90;
-        } else if (item.contains("Veg Burger")) {
-            return 70;
-        } else if (item.contains("Paneer Burger")) {
-            return 80;
-        } else if (item.contains("Mushroom Burger")) {
-            return 90;
-        } else if (item.contains("Spicy Bean Burger")) {
-            return 85;
-        } else if (item.contains("Avocado Burger")) {
-            return 100;
-        } else if (item.contains("Chicken Burger")) {
-            return 90;
-        } else if (item.contains("Beef Burger")) {
-            return 120;
-        } else if (item.contains("BBQ Chicken Burger")) {
-            return 110;
-        } else if (item.contains("Spicy Chicken Burger")) {
-            return 100;
-        } else if (item.contains("Teriyaki Chicken Burger")) {
-            return 130;
-        } else i
+    // Add selected item to Order
+    private static void addToOrder() {
+        String category = (String) foodCategory.getSelectedItem();
+        String item = (String) itemMenu.getSelectedItem();
+        String quantityText = quantityField.getText();
+
+        if ("Select Category".equals(category) || "Select Item".equals(item) || quantityText.isEmpty()) {
+            JOptionPane.showMessageDialog(frame, "Please select category, item, and enter quantity.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        try {
+            int quantity = Integer.parseInt(quantityText);
+            double price = getPrice(item);
+            double itemTotal = price * quantity;
+
+            orderDetails += item + " (" + quantity + "): ₹" + itemTotal + "\n";
+            orderSummary.setText(orderDetails);
+            total += itemTotal;
+            totalLabel.setText("Total: ₹" + total);
+
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(frame, "Please enter a valid number for quantity.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    // Get price for selected item
+    private static double getPrice(String item) {
+        switch (item) {
+            case "Classic Fries": return 100;
+            case "Cheese Fries": return 120;
+            case "Margherita Pizza": return 250;
+            case "Veggie Supreme Pizza": return 300;
+            case "Pepperoni Pizza": return 450;
+            case "Chicken Tikka Pizza": return 480;
+            default: return 0;
+        }
+    }
+
+    // Generate Bill, display total, and save customer details
+    private static void generateBill() {
+        double finalTotal = total;
+
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USERNAME, DB_PASSWORD)) {
+            String insertOrderQuery = "INSERT INTO orders (order_details, total) VALUES (?, ?)";
+            try (PreparedStatement orderStatement = connection.prepareStatement(insertOrderQuery, Statement.RETURN_GENERATED_KEYS)) {
+                orderStatement.setString(1, orderDetails);
+                orderStatement.setDouble(2, finalTotal);
+                orderStatement.executeUpdate();
+
+                ResultSet generatedKeys = orderStatement.getGeneratedKeys();
+                int orderId = -1;
+                if (generatedKeys.next()) {
+                    orderId = generatedKeys.getInt(1);
+                }
+
+                JOptionPane.showMessageDialog(frame, "Order placed successfully!\nTotal Amount: ₹" + finalTotal, "Order Placed", JOptionPane.INFORMATION_MESSAGE);
+
+                String customerName = JOptionPane.showInputDialog(frame, "Enter Customer Name:");
+                String contactNumber = JOptionPane.showInputDialog(frame, "Enter Contact Number:");
+
+                if (customerName != null && !customerName.isEmpty() && contactNumber != null && !contactNumber.isEmpty()) {
+                    String insertCustomerQuery = "INSERT INTO customer (name, contact_number, order_id) VALUES (?, ?, ?)";
+                    try (PreparedStatement customerStatement = connection.prepareStatement(insertCustomerQuery)) {
+                        customerStatement.setString(1, customerName);
+                        customerStatement.setString(2, contactNumber);
+                        customerStatement.setInt(3, orderId);
+                        customerStatement.executeUpdate();
+
+                        JOptionPane.showMessageDialog(frame, "Customer details saved successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                    }
+                } else {
+                    JOptionPane.showMessageDialog(frame, "Customer details not provided. Skipping this step.", "Warning", JOptionPane.WARNING_MESSAGE);
+                }
+
+                CardLayout cardLayout = (CardLayout) mainPanel.getLayout();
+                cardLayout.show(mainPanel, "WelcomePage");
+
+                total = 0;
+                orderDetails = "";
+                orderSummary.setText("");
+                totalLabel.setText("Total: ₹0");
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(frame, "Failed to place order. Try again.", "Error", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        }
+    }
+} 
