@@ -42,7 +42,7 @@ public class Foodorder {
 
     public void displayMenu() {
         System.out.println("********** WELCOME TO OUR CAFE ************");
-        System.out.println("*******************************************");
+        System.out.println("*");
         System.out.println("---- Fries ----");
         System.out.println("      1. Classic Fries       100/-");
         System.out.println("      2. Cheese Fries        120/-");
@@ -75,7 +75,7 @@ public class Foodorder {
         System.out.println("     25. Cake                120/-");
         System.out.println("     26. Ice Cream           80/-");
         System.out.println("     27. Brownie             90/-");
-        System.out.println("********************************************");
+        System.out.println("");
         System.out.println("     What would you like to order today?      ");
     }
 
@@ -147,9 +147,9 @@ public class Foodorder {
     }
 
     public void saveOrderToDatabase(int total, int totalQuantity) {
-        String url = "jdbc:mysql://localhost:3306/yourDatabase";
-        String user = "yourUsername";
-        String password = "yourPassword";
+        String url = "jdbc:mysql://localhost:3307/CafeOrders";
+        String user = "root";
+        String password = "";
 
         try (Connection con = DriverManager.getConnection(url, user, password);
              PreparedStatement ps = con.prepareStatement("INSERT INTO Customers (totalBill, totalQuantity) VALUES (?, ?)")) {
